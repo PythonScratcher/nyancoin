@@ -191,6 +191,7 @@ float hashrate = 0;
 float balance = -1;
 char status[24] = "starting";
 int partialUpdates = 0;
+int apiFailures = 0;
 
 uint32_t lastRateMs = 0, lastTipMs = 0, lastDrawMs = 0, lastBalMs = 0;
 uint64_t lastRateHashes = 0;
@@ -205,7 +206,7 @@ void fmtDuration(float s, char *out, size_t cap) {
 
 void drawScreen(bool full) {
   if (!USE_DISPLAY) return;
-  if (full || partialUpdates >= 15) { display.setFullWindow(); partialUpdates = 0; }  // clears ghosting
+  if (full || partialUpdates >= 10) { display.setFullWindow(); partialUpdates = 0; }  // clears ghosting
   else { display.setPartialWindow(0, 0, display.width(), display.height()); partialUpdates++; }
   char line[48];
   display.firstPage();
@@ -221,21 +222,22 @@ void drawScreen(bool full) {
     display.print(status);
     display.drawFastHLine(0, 21, display.width(), GxEPD_BLACK);
 
-    display.setFont(&FreeSansBold12pt7b);
-    display.setCursor(2, 46);
-    if (hashrate >= 1000) snprintf(line, sizeof line, "%.1f kH/s", hashrate / 1000);
-    else snprintf(line, sizeof line, "%.0f H/s", hashrate);
+    display.setFont(&FreeSansBold12pt7b);              // balance: the big line
+    display.setCursor(2, 45);
+    if (balance >= 0) snprintf(line, sizeof line, "%.2f NYAN", balance);
+    else snprintf(line, sizeof line, "-- NYAN");
     display.print(line);
 
     display.setFont(&FreeSans9pt7b);
-    display.setCursor(2, 66);
-    snprintf(line, sizeof line, "Block %lu   diff %lu bits", (unsigned long)job.height, (unsigned long)job.bits);
+    display.setCursor(2, 64);
+    if (hashrate >= 1000) snprintf(line, sizeof line, "%.1f kH/s   found %lu", hashrate / 1000, (unsigned long)found);
+    else snprintf(line, sizeof line, "%.0f H/s   found %lu", hashrate, (unsigned long)found);
     display.print(line);
-    display.setCursor(2, 86);
-    if (balance >= 0) snprintf(line, sizeof line, "Found %lu   %.2f NYAN", (unsigned long)found, balance);
-    else snprintf(line, sizeof line, "Found %lu", (unsigned long)found);
+    display.setCursor(2, 82);
+    if (job.height) snprintf(line, sizeof line, "Block %lu   diff %lu", (unsigned long)job.height, (unsigned long)job.bits);
+    else snprintf(line, sizeof line, "Block --");
     display.print(line);
-    display.setCursor(2, 106);
+    display.setCursor(2, 100);
     if (hashrate > 0 && job.bits) {
       char d[16]; fmtDuration((float)(1ULL << job.bits) / hashrate, d, sizeof d);
       snprintf(line, sizeof line, "~%s per block", d);
@@ -269,9 +271,24 @@ void ensureWiFi() {
   if (WiFi.status() == WL_CONNECTED) Serial.printf("WiFi OK, IP %s\n", WiFi.localIP().toString().c_str());
 }
 
+// The node only sends small replies, so 4 KB TLS buffers are enough. The default 16 KB often
+// can't be found in the ESP8266's fragmented memory after the first connection (-> "HTTP -1").
+void prepClient(BearSSL::WiFiClientSecure &cl) {
+  cl.setBufferSizes(4096, 512);
+  cl.setTimeout(15000);
+}
+
+void reportFail(BearSSL::WiFiClientSecure &cl, const char *path, int code) {
+  char err[80] = "";
+  int e = cl.getLastSSLError(err, sizeof err);
+  Serial.printf("node %s -> HTTP %d  (TLS error %d: %s)  free heap %u, largest block %u\n", path, code, e, err,
+                ESP.getFreeHeap(), ESP.getMaxFreeBlockSize());
+}
+
 // Fetch the node's public key without trusting it, then accept it only if it matches NODE_PIN.
 bool pinNode() {
   BearSSL::WiFiClientSecure cl;
+  prepClient(cl);
   cl.setInsecure();                                   // safe: the key is checked against the pin below
   HTTPClient http;
   http.setTimeout(15000);
@@ -279,7 +296,7 @@ bool pinNode() {
   int code = http.GET();
   String body = code == 200 ? http.getString() : String();
   http.end();
-  if (code != 200) { Serial.printf("/pubkey failed: HTTP %d\n", code); return false; }
+  if (code != 200) { reportFail(cl, "/pubkey", code); return false; }
   JsonDocument doc;
   if (deserializeJson(doc, body)) return false;
   const char *pem = doc["pem"];
@@ -298,6 +315,7 @@ bool pinNode() {
 // HTTPS request to the node, which must present the pinned key. GET when body is null.
 bool api(const char *path, const char *body, JsonDocument &doc) {
   BearSSL::WiFiClientSecure cl;
+  prepClient(cl);
   cl.setKnownKey(nodeKey);
   cl.setSession(&tlsSession);                         // TLS session resumption: much faster reconnects
   HTTPClient http;
@@ -312,8 +330,13 @@ bool api(const char *path, const char *body, JsonDocument &doc) {
   }
   bool ok = false;
   if (code == 200) ok = !deserializeJson(doc, http.getString());
-  else Serial.printf("node %s -> HTTP %d\n", path, code);
+  else reportFail(cl, path, code);
   http.end();
+  if (ok) apiFailures = 0;
+  else if (++apiFailures >= 5) {                      // keep failing: re-verify the node from scratch
+    Serial.println("re-checking node identity");
+    delete nodeKey; nodeKey = nullptr; apiFailures = 0;
+  }
   return ok;
 }
 
@@ -386,6 +409,7 @@ void setup() {
   if (USE_DISPLAY) {
     display.init(115200, true, 2, false);             // 2 ms reset pulse suits Waveshare boards
     display.setRotation(1);                            // landscape 250x122
+    display.clearScreen();                             // wipe leftover images completely
     drawScreen(true);
   }
   if (!valid_addr(ADDRESS)) {
@@ -401,6 +425,8 @@ void loop() {
   if (!nodeKey) {
     setStatus("node...", true);
     if (!pinNode()) { delay(30000); return; }
+    refreshBalance();
+    drawScreen(false);
   }
   if (!job.valid) {
     if (!getWork()) { setStatus("no work", true); delay(10000); return; }
