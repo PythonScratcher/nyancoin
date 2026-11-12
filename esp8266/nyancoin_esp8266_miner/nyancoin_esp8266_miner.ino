@@ -24,12 +24,13 @@
  *   2. Library Manager: install "GxEPD2" (also installs Adafruit GFX) and "ArduinoJson" (v7).
  *   3. Fill in the SETTINGS below and upload.
  *
- * Wiring (Waveshare 2.13" module -> ESP8266). CS and DC are kept OFF the boot pins
- * D3/D8 (GPIO0/GPIO15), which stop the board booting, and OFF D6 (GPIO12), which the
- * SPI hardware takes over as MISO (that scrambles the screen):
+ * Wiring (Waveshare 2.13" module -> ESP8266). Nothing goes on the boot pins D3/D4/D8
+ * (GPIO0/2/15): a display tugging on those stops the board booting and uploading.
+ * D6 (GPIO12) is avoided too, because SPI takes it over. RST is left unconnected: the
+ * screen controller is reset by a software command instead.
  *   VCC -> 3V3     GND -> GND
  *   DIN -> D7 (GPIO13)   CLK -> D5 (GPIO14)   CS -> D1 (GPIO5)
- *   DC  -> D0 (GPIO16)   RST -> D4 (GPIO2)    BUSY -> D2 (GPIO4)
+ *   DC  -> D0 (GPIO16)   BUSY -> D2 (GPIO4)   RST -> not connected
  */
 
 #include <ESP8266WiFi.h>
@@ -58,7 +59,7 @@ static const uint32_t HALVING = 10500000UL;
 
 // Display: Waveshare 2.13" V4 = GDEY0213B74 (SSD1680). If the picture is garbled, try GxEPD2_213_BN.
 GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT>
-    display(GxEPD2_213_GDEY0213B74(/*CS=D1*/ 5, /*DC=D0*/ 16, /*RST=D4*/ 2, /*BUSY=D2*/ 4));
+    display(GxEPD2_213_GDEY0213B74(/*CS=D1*/ 5, /*DC=D0*/ 16, /*RST: none*/ -1, /*BUSY=D2*/ 4));
 
 // ---- BEGIN PURE HELPERS (plain C: also compiled and tested on a PC) ----------
 static void sha256(const void *data, size_t n, uint8_t out[32]) {
