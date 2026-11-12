@@ -35,14 +35,14 @@ No screen? Set `USE_DISPLAY = false`.
 | DIN | D7 (GPIO13) |
 | CLK | D5 (GPIO14) |
 | CS | D1 (GPIO5) |
-| DC | D6 (GPIO12) |
+| DC | D0 (GPIO16) |
 | RST | D4 (GPIO2) |
 | BUSY | D2 (GPIO4) |
 
 ## Troubleshooting
 - **Garbled or blank screen:** in the sketch, replace both `GxEPD2_213_GDEY0213B74` with `GxEPD2_213_BN`.
 - **Gibberish in the serial monitor / board won't start with the screen attached:** make sure CS and DC are on
-  D1 and D6 as above, not on the boot pins D8/D3 (older wiring guides use those).
+  D1 and D0 as above: not on the boot pins D8/D3, and not on D6, which SPI uses (garbled screen).
 - **"PIN MISMATCH":** `NODE_PIN` is wrong, or something is impersonating the node. Nothing is mined.
 - **"node too old" / HTTP 404:** the node needs node.py 1.1.0 or newer.
 - **"BAD WORK":** the node sent a block that doesn't pay you the right reward, so it was refused.
