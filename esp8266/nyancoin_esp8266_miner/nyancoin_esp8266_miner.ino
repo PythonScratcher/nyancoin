@@ -15,7 +15,7 @@
  * 1000x slower than a PC. It can find blocks while difficulty is low, but once PC miners
  * join it will very rarely win one. It's a fun "my coin runs on a tiny chip" project.
  *
- * Needs a node with the tiny-miner API (/work, /submit, /pubkey): node.py 1.1 or newer.
+ * Needs a node with the tiny-miner API (/work, /submit, /pubkey): node.py 1.1.1 or newer.
  *
  * Arduino IDE setup
  *   1. Boards Manager URL: https://arduino.esp8266.com/stable/package_esp8266com_index.json
@@ -26,11 +26,11 @@
  *
  * Wiring (Waveshare 2.13" module -> ESP8266). Nothing goes on the boot pins D3/D4/D8
  * (GPIO0/2/15): a display tugging on those stops the board booting and uploading.
- * D6 (GPIO12) is avoided too, because SPI takes it over. RST is left unconnected: the
- * screen controller is reset by a software command instead.
+ * RST is on D6 (GPIO12): SPI claims D6 as MISO when it starts, but the screen never sends data
+ * back, so the sketch takes D6 back and drives RST itself.
  *   VCC -> 3V3     GND -> GND
  *   DIN -> D7 (GPIO13)   CLK -> D5 (GPIO14)   CS -> D1 (GPIO5)
- *   DC  -> D0 (GPIO16)   BUSY -> D2 (GPIO4)   RST -> not connected
+ *   DC  -> D0 (GPIO16)   BUSY -> D2 (GPIO4)   RST -> D6 (GPIO12)
  */
 
 #include <ESP8266WiFi.h>
@@ -59,7 +59,7 @@ static const uint32_t HALVING = 10500000UL;
 
 // Display: Waveshare 2.13" V4 = GDEY0213B74 (SSD1680). If the picture is garbled, try GxEPD2_213_BN.
 GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT>
-    display(GxEPD2_213_GDEY0213B74(/*CS=D1*/ 5, /*DC=D0*/ 16, /*RST: none*/ -1, /*BUSY=D2*/ 4));
+    display(GxEPD2_213_GDEY0213B74(/*CS=D1*/ 5, /*DC=D0*/ 16, /*RST=D6*/ 12, /*BUSY=D2*/ 4));
 
 // ---- BEGIN PURE HELPERS (plain C: also compiled and tested on a PC) ----------
 static void sha256(const void *data, size_t n, uint8_t out[32]) {
@@ -130,18 +130,38 @@ static size_t b64_decode(const char *in, size_t len, uint8_t *out, size_t max) {
   return o;
 }
 
-/* Checks the node's public key (PEM) against the pin = sha256 of the key's DER bytes */
-static bool pem_matches_pin(const char *pem, const char *pin_hex) {
-  const char *B = "-----BEGIN PUBLIC KEY-----", *E = "-----END PUBLIC KEY-----";
+static bool contains_bytes(const uint8_t *h, size_t hn, const uint8_t *n, size_t nn) {
+  if (!nn || nn > hn) return false;
+  for (size_t i = 0; i + nn <= hn; i++)
+    if (memcmp(h + i, n, nn) == 0) return true;
+  return false;
+}
+
+/* base64 body of a PEM block -> bytes; returns length or 0 */
+static size_t pem_body(const char *pem, const char *B, const char *E, uint8_t *out, size_t max) {
   const char *b = strstr(pem, B), *e = strstr(pem, E);
-  if (!b || !e || e < b) return false;
+  if (!b || !e || e < b) return 0;
   b += strlen(B);
-  uint8_t der[512], d[32]; char hx[65];
-  size_t n = b64_decode(b, (size_t)(e - b), der, sizeof der);
-  if (!n) return false;
-  sha256(der, n, d);
+  return b64_decode(b, (size_t)(e - b), out, max);
+}
+
+/* The node's certificate is trusted only if (1) its public key hashes to the pin and (2) the
+ * certificate really contains that key. On success, writes the certificate's SHA-1 fingerprint,
+ * which the TLS library then requires on every later connection. */
+static bool cert_matches_pin(const char *key_pem, const char *cert_pem, const char *pin_hex, uint8_t sha1_out[20]) {
+  static uint8_t spki[512], cert[2048];
+  size_t ns = pem_body(key_pem, "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----", spki, sizeof spki);
+  size_t nc = pem_body(cert_pem, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", cert, sizeof cert);
+  if (!ns || !nc) return false;
+  uint8_t d[32]; char hx[65];
+  sha256(spki, ns, d);
   to_hex(d, 32, hx);
-  return strcmp(hx, pin_hex) == 0;
+  if (strcmp(hx, pin_hex) != 0 || !contains_bytes(cert, nc, spki, ns)) return false;
+  br_sha1_context c;
+  br_sha1_init(&c);
+  br_sha1_update(&c, cert, nc);
+  br_sha1_out(&c, sha1_out);
+  return true;
 }
 
 /* The exact block header text the node hashes (canonical JSON + "|"), built from the
@@ -182,7 +202,8 @@ struct Job {
   uint32_t startedMs = 0;
 } job;
 
-BearSSL::PublicKey *nodeKey = nullptr;
+uint8_t certSha1[20];                                 // pinned node certificate fingerprint
+bool havePin = false;
 BearSSL::Session tlsSession;
 
 uint32_t nonce = 0, found = 0, rejected = 0;
@@ -299,15 +320,14 @@ bool pinNode() {
   if (code != 200) { reportFail(cl, "/pubkey", code); return false; }
   JsonDocument doc;
   if (deserializeJson(doc, body)) return false;
-  const char *pem = doc["pem"];
-  if (!pem) { Serial.println("node too old: update node.py to 1.1+"); return false; }
-  if (!pem_matches_pin(pem, NODE_PIN)) {
+  const char *pem = doc["pem"], *cert = doc["cert"];
+  if (!pem || !cert) { Serial.println("node too old: update node.py to 1.1.1+"); return false; }
+  if (!cert_matches_pin(pem, cert, NODE_PIN, certSha1)) {
     Serial.println("!!! NODE PIN MISMATCH - wrong NODE_PIN, or someone is impersonating the node");
     setStatus("PIN MISMATCH", true);
     return false;
   }
-  delete nodeKey;
-  nodeKey = new BearSSL::PublicKey(pem);
+  havePin = true;
   Serial.println("Node identity verified (pin OK)");
   return true;
 }
@@ -316,7 +336,7 @@ bool pinNode() {
 bool api(const char *path, const char *body, JsonDocument &doc) {
   BearSSL::WiFiClientSecure cl;
   prepClient(cl);
-  cl.setKnownKey(nodeKey);
+  cl.setFingerprint(certSha1);                        // only the pinned certificate is accepted
   cl.setSession(&tlsSession);                         // TLS session resumption: much faster reconnects
   HTTPClient http;
   http.setTimeout(15000);
@@ -335,7 +355,7 @@ bool api(const char *path, const char *body, JsonDocument &doc) {
   if (ok) apiFailures = 0;
   else if (++apiFailures >= 5) {                      // keep failing: re-verify the node from scratch
     Serial.println("re-checking node identity");
-    delete nodeKey; nodeKey = nullptr; apiFailures = 0;
+    havePin = false; apiFailures = 0;
   }
   return ok;
 }
@@ -408,6 +428,8 @@ void setup() {
   Serial.println("\nNyanCoin ESP8266 miner");
   if (USE_DISPLAY) {
     display.init(115200, true, 2, false);             // 2 ms reset pulse suits Waveshare boards
+    pinMode(12, OUTPUT);                               // SPI.begin() turned D6 into MISO; the screen
+    digitalWrite(12, HIGH);                            // never talks back, so take D6 back for RST
     display.setRotation(1);                            // landscape 250x122
     display.clearScreen();                             // wipe leftover images completely
     drawScreen(true);
@@ -422,7 +444,7 @@ void setup() {
 void loop() {
   ensureWiFi();
   if (WiFi.status() != WL_CONNECTED) { delay(2000); return; }
-  if (!nodeKey) {
+  if (!havePin) {
     setStatus("node...", true);
     if (!pinNode()) { delay(30000); return; }
     refreshBalance();

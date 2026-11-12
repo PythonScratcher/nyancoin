@@ -377,7 +377,7 @@ _verify_rules_lock()
 CHECKPOINTS = {}
 
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # ------------------------------------------------------------ node policy
 MAX_BODY, MAX_MEMPOOL, MAX_PEERS = 1_000_000, 5000, 32
@@ -513,7 +513,7 @@ class Node:
         self.mempool, self.peers = {}, {}
         self.rate, self.bad = {}, {}
         self.syncing, self.tls_pin, self.seen = False, None, {}
-        self.tls_pem, self.jobs = None, {}                 # tiny-miner API state
+        self.tls_pem, self.tls_cert, self.jobs = None, None, {}   # tiny-miner API state
         self.boot = [p for p in peers if valid_peer(p)] + SEEDS
         self._load()
         self._reindex()
@@ -1018,7 +1018,7 @@ def make_handler(node):
                         return self.reply(400, {"error": "bad address"})
                     return self.reply(200, node.make_work(a))
                 if u.path == "/pubkey":                 # lets tiny miners check the TLS pin
-                    return self.reply(200, {"pem": node.tls_pem})
+                    return self.reply(200, {"pem": node.tls_pem, "cert": node.tls_cert})
                 if u.path == "/template":
                     a = q.get("addr", [""])[0]
                     if not valid_addr(a):
@@ -1133,8 +1133,10 @@ def main():
     else:
         kp, cp, node.tls_pin = ensure_cert(data, urlsplit(public).hostname if public else None)
         with open(cp, "rb") as fh:
-            node.tls_pem = x509.load_pem_x509_certificate(fh.read()).public_key().public_bytes(
-                ser.Encoding.PEM, ser.PublicFormat.SubjectPublicKeyInfo).decode()
+            cert_pem = fh.read()
+        node.tls_cert = cert_pem.decode()           # tiny miners pin this cert after checking its key
+        node.tls_pem = x509.load_pem_x509_certificate(cert_pem).public_key().public_bytes(
+            ser.Encoding.PEM, ser.PublicFormat.SubjectPublicKeyInfo).decode()
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(cp, kp)
