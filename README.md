@@ -19,27 +19,32 @@ Each file is **self-contained**: you can give someone only `wallet.py` or only `
 
 Requirements: a recent Python 3 (developed and tested on 3.13) and `pip install cryptography`. Nothing else.
 
-## Quick start (everything on one computer)
+## Quick start
+
+The wallet and miner connect to the **official seed node, `inter.net.sh`**, by default (its TLS pin is built
+in, so the connection is verified). You don't need to run a node to use NyanCoin.
 
 ```bash
 pip install cryptography
 
-# 1. Make a wallet (asks for a passphrase, 12+ characters)
+# 1. Make a wallet (shows your recovery phrase, then asks for a password, 12+ characters)
 python3 wallet.py new wallet.json
 python3 wallet.py show wallet.json            # prints your address: NYAN...
 
-# 2. Start a node (terminal 1)
-python3 node.py --port 8001
-
-# 3. Start the miner (terminal 2) - rewards go to your address
+# 2. Mine - rewards go to your address
 python3 miner.py --address NYAN...youraddress
 
-# 4. Check and spend
-python3 wallet.py balance NYAN...youraddress
+# 3. Check and spend
+python3 wallet.py history wallet.json        # balance, payments, rewards, confirmations
 python3 wallet.py send --wallet wallet.json --to NYAN...friend --amount 1.5
-python3 wallet.py history wallet.json        # payments, rewards, pending + confirmations
 python3 wallet.py status
 ```
+
+Or use the windows: `python3 gui_wallet.py` and `python3 gui_miner.py`.
+
+**Running your own node** (better privacy, and it helps the network): start `python3 node.py --port 8001`.
+It finds the seed by itself. Then add `--node https://127.0.0.1:8001` to wallet/miner commands, or set the
+node in the GUIs' settings.
 
 The first time a program connects to a node it remembers that node's TLS key (like SSH). A web status page is
 at `https://127.0.0.1:8001/` (your browser will warn about the self-signed certificate; that is expected).
@@ -65,7 +70,7 @@ at `https://127.0.0.1:8001/` (your browser will warn about the self-signed certi
 `--max-reorg`, `--insecure` (plain HTTP, testing only).
 **miner.py** options: `--address` (required), `--node`, `--procs`.
 
-`--node` defaults to `https://127.0.0.1:8001` everywhere.
+`--node` defaults to the official seed (`https://inter.net.sh:8001#PIN`, pin built in). Use `--node https://127.0.0.1:8001` for your own local node.
 
 ## Running a real network
 

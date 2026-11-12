@@ -224,6 +224,10 @@ _verify_rules_lock()
 # ======================================================================
 VERSION = "1.0.0"
 
+# Default node: the official seed. Run your own node and use --node https://127.0.0.1:8001 for best privacy.
+DEFAULT_NODE = "https://inter.net.sh:8001#aacf9733d8a238bc0f8a62232e5ab5b804cd3fe80b32e90c58bd70ff52f1fc41"
+
+
 def get_password(confirm=False):
     pw = os.environ.get("NYAN_PASS") or getpass.getpass("Wallet password: ")
     if len(pw) < 12:
@@ -584,7 +588,7 @@ def cli_main():
     ap = argparse.ArgumentParser(description="NyanCoin wallet")
     ap.add_argument("--version", action="version", version=f"NyanCoin wallet {VERSION}")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    DEF = "https://127.0.0.1:8001"
+    DEF = DEFAULT_NODE
     nw = sub.add_parser("new", help="create a wallet with a new recovery phrase")
     nw.add_argument("file"); nw.add_argument("--words", type=int, choices=[12, 24], default=24)
     sub.add_parser("restore", help="rebuild a wallet file from your recovery phrase").add_argument("file")
@@ -638,7 +642,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 GUI_VERSION = "1.0.0"
-DEFAULT_NODE = "https://127.0.0.1:8001"
+DEFAULT_NODE = "https://inter.net.sh:8001#aacf9733d8a238bc0f8a62232e5ab5b804cd3fe80b32e90c58bd70ff52f1fc41"   # official seed
 MIN_RELAY_FEE = 1000            # nodes refuse payments with a lower fee (0.00001 NYAN)
 CONFIG = os.path.join(HOME, "gui.json")
 

@@ -21,7 +21,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 GUI_VERSION = "1.0.0"
-DEFAULT_NODE = "https://127.0.0.1:8001"
+DEFAULT_NODE = "https://inter.net.sh:8001#aacf9733d8a238bc0f8a62232e5ab5b804cd3fe80b32e90c58bd70ff52f1fc41"   # official seed
 CONFIG = os.path.join(HOME, "gui_miner.json")
 
 

@@ -388,7 +388,7 @@ MAX_CONN, MAX_CONN_PER_IP = 200, 32     # concurrent connections (global / per I
 PEERS_PER_GROUP = 2            # max untrusted peers per /16 network (anti-eclipse)
 # Hard-coded bootstrap nodes WITH their TLS key pin (printed when a node starts):
 #   SEEDS = ["https://seed.example.com:8001#<64-hex-pin>"]
-SEEDS = []
+SEEDS = ["https://inter.net.sh:8001#aacf9733d8a238bc0f8a62232e5ab5b804cd3fe80b32e90c58bd70ff52f1fc41"]   # official seed (inter.net.sh), pinned
 
 
 def ip_key(ip):

@@ -104,7 +104,8 @@ def main():
     ap = argparse.ArgumentParser(description="NyanCoin miner")
     ap.add_argument("--version", action="version", version=f"NyanCoin miner {VERSION}")
     ap.add_argument("--address", required=True, help="address that receives block rewards")
-    ap.add_argument("--node", default="https://127.0.0.1:8001")
+    ap.add_argument("--node", default="https://inter.net.sh:8001#aacf9733d8a238bc0f8a62232e5ab5b804cd3fe80b32e90c58bd70ff52f1fc41",
+                    help="node to mine through (default: the official seed)")
     ap.add_argument("--procs", type=int, default=os.cpu_count() or 1)
     a = ap.parse_args()
     if not valid_addr(a.address):
