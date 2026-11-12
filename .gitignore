@@ -10,3 +10,5 @@ known_hosts*
 __pycache__/
 *.pyc
 *.png
+!android/screenshots/*.png
+!android/app/src/test/resources/vectors.json

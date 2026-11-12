@@ -1,0 +1,66 @@
+{
+ "rules": "fbd23d4dfbfb6507ee1d68a12d65448de230a3d2304351c6cd7f3e872e1473f8",
+ "chain": "nyancoin-2",
+ "wallets": [
+  {
+   "entropy": "00000000000000000000000000000000",
+   "words": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+   "seed": "560f9f3c94558b6551928bb781cf6092c6b8800b4fc544af2c9444ed126d51aa",
+   "pub": "e96b1c6b8769fdb0b34fbecfdf85c33b053cecad9517e1ab88cba614335775c1",
+   "address": "NYANada8e3423e041d247dca60598e6d3d8834161fe5f82e"
+  },
+  {
+   "entropy": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+   "words": "legal winner thank year wave sausage worth useful legal winner thank yellow",
+   "seed": "ccbb1d273f83520ab802ae6c5fb5c7ccee16350a8bbbb9e8c93b7d26f02ac626",
+   "pub": "17813e6cc6b9a7317ee78a311385d52dd0cb3b3831cfa44db9a0fde1a2afbf09",
+   "address": "NYANb7715260b27b6aaba695a4ac9dda398f0db8a6471bc1"
+  },
+  {
+   "entropy": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "words": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+   "seed": "3bb84ae96187e9eedc77b123c003367be03740096d5b33bd5a9e30d76a661757",
+   "pub": "f3103bc0ea9cfb6fb1d0c9871ce3582384c4c533257f60a7f641403a66126997",
+   "address": "NYAN57d9b863cbf93a352f16d4f25a89230f5b4049242974"
+  },
+  {
+   "entropy": "9e3779b97f4a7c15f39cc0605cedc8341082276bf3a27251f86c6a11d0c18e95",
+   "words": "owner rookie hour write pond april solar object gate trash improve habit amused beauty quit inmate inch more brand stage brown general demise rookie",
+   "seed": "a6313e4e605e993b022d64b00ce7bdb1e564f9e3dea6411d96460aafcf6183f6",
+   "pub": "fdd469b82e8a59550a5d99b6ce43483f6eeafb7e3ab76857264171f2a0fca0b3",
+   "address": "NYAN8352cf0b350b7389f59ce63b36a16eb8faef253029c1"
+  }
+ ],
+ "txs": [
+  {
+   "entropy": "00000000000000000000000000000000",
+   "body": "{\"amount\":250000000,\"chain\":\"nyancoin-2\",\"fee\":10000,\"from\":\"NYANada8e3423e041d247dca60598e6d3d8834161fe5f82e\",\"nonce\":3,\"to\":\"NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41\"}",
+   "sig": "2e40248ae85b3dba43cb892adfd2acce07eebd1d837354b440ce48b3586b66bda122ac8768abb56f9f1b6fbc4885907cfeba511d98637bb8cf742f30464df609"
+  },
+  {
+   "entropy": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+   "body": "{\"amount\":250000000,\"chain\":\"nyancoin-2\",\"fee\":10000,\"from\":\"NYANb7715260b27b6aaba695a4ac9dda398f0db8a6471bc1\",\"nonce\":3,\"to\":\"NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41\"}",
+   "sig": "1c813e0196514f1f0f5181bacdd394f8db45372d4927e70bb3e6278cf3457834449c187e32088e1df80e98c694bb453d5a6bbe557150d582c431e72847812f05"
+  },
+  {
+   "entropy": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "body": "{\"amount\":250000000,\"chain\":\"nyancoin-2\",\"fee\":10000,\"from\":\"NYAN57d9b863cbf93a352f16d4f25a89230f5b4049242974\",\"nonce\":3,\"to\":\"NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41\"}",
+   "sig": "3f73b94a3d2a04bfacd703f3f0f83a5759affeedeeaac3eafaa2829a59fd68834a506c55ee59f94ab0ad1d37090d830833b462391b0655512f706eb0184b5705"
+  },
+  {
+   "entropy": "9e3779b97f4a7c15f39cc0605cedc8341082276bf3a27251f86c6a11d0c18e95",
+   "body": "{\"amount\":250000000,\"chain\":\"nyancoin-2\",\"fee\":10000,\"from\":\"NYAN8352cf0b350b7389f59ce63b36a16eb8faef253029c1\",\"nonce\":3,\"to\":\"NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41\"}",
+   "sig": "faa542665ab33a1dde2443e23525547c378c8f2dc227c00f2b5352b00b716e4a331ce3229aa921d58e1364503ce06b275ad68abffeeb13021d9d6683de639d0e"
+  }
+ ],
+ "prefixes": [
+  {
+   "bits": 23,
+   "height": 42,
+   "prev": "abababababababababababababababababababababababababababababababab",
+   "time": 1762999999,
+   "address": "NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41",
+   "prefix": "{\"bits\":23,\"index\":42,\"prev\":\"abababababababababababababababababababababababababababababababab\",\"time\":1762999999,\"txs\":[{\"amount\":100000000,\"from\":\"COINBASE\",\"height\":42,\"to\":\"NYANe305634ff1babc194d403b7f2c81266a894ccd75ca41\"}]}|"
+  }
+ ]
+}

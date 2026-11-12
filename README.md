@@ -274,3 +274,25 @@ whole network agrees on, otherwise nodes will split.
 - `data-<port>/tls.key` + `tls.crt`: the node's TLS identity (**keep `tls.key` private**)
 - `~/.nyancoin/known_hosts.json`: remembered server keys (set `NYAN_HOME` to move it)
 - `wallet.json`: your encrypted wallet (**back it up**)
+
+## Android app (wallet + miner)
+
+A native Kotlin / Jetpack Compose app in `android/`. It isn't a web wrapper: it signs, mines and checks node pins itself.
+
+- Create or restore a wallet with a 24-word phrase. The wallet file uses the same format as `wallet.py`, so the two apps open each other's files.
+- Shows your balance and history; send (with a password check) and receive (QR code).
+- Mine on the phone's CPU, with a thread slider and a keep-screen-on toggle.
+- Pins the node's key (`https://host:port#PIN`), the same way the PC wallet does.
+
+<p>
+<img src="android/screenshots/2_wallet.png" width="200"> <img src="android/screenshots/3_mine.png" width="200">
+<img src="android/screenshots/4_settings.png" width="200">
+</p>
+
+Build it (JDK 17 + Android SDK):
+
+```
+cd android
+gradle assembleRelease      # -> app/build/outputs/apk/release/app-release.apk
+gradle testDebugUnitTest    # checks the Kotlin code against Python-made test vectors
+```
