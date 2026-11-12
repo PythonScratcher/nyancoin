@@ -14,6 +14,7 @@ A small peer-to-peer, proof-of-work cryptocurrency in three standalone Python fi
 | `miner.py` | miners | Mines blocks using all CPU cores. Connects to any node. Does nothing else. |
 | `gui_wallet.py` | normal users who prefer windows | The same wallet with a desktop window: create/restore with a recovery phrase, balance, history, send. |
 | `gui_miner.py` | miners who prefer windows | The same miner with a window: start/stop, CPU cores, hashrate, blocks found, balance. |
+| `esp8266/` | tinkerers | Arduino miner for an ESP8266, with an optional Waveshare 2.13" e-Paper V4 screen. See `esp8266/README.md`. |
 
 Each file is **self-contained**: you can give someone only `wallet.py` or only `miner.py`.
 

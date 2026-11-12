@@ -377,7 +377,7 @@ _verify_rules_lock()
 CHECKPOINTS = {}
 
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # ------------------------------------------------------------ node policy
 MAX_BODY, MAX_MEMPOOL, MAX_PEERS = 1_000_000, 5000, 32
@@ -513,6 +513,7 @@ class Node:
         self.mempool, self.peers = {}, {}
         self.rate, self.bad = {}, {}
         self.syncing, self.tls_pin, self.seen = False, None, {}
+        self.tls_pem, self.jobs = None, {}                 # tiny-miner API state
         self.boot = [p for p in peers if valid_peer(p)] + SEEDS
         self._load()
         self._reindex()
@@ -902,6 +903,36 @@ class Node:
             except Exception:
                 pass
 
+    # --- lightweight mining API for tiny devices (ESP8266 etc.) --------------------
+    # The device gets a few small fields, rebuilds the block header itself (so it can check
+    # the block pays ITS address), and submits only a job id + nonce. No transactions are
+    # included in these blocks, so the header stays ~250 bytes.
+    def make_work(self, addr):
+        b = self.build_template(addr)
+        b["txs"] = [{"from": "COINBASE", "to": addr, "amount": reward(b["index"]), "height": b["index"]}]
+        job = os.urandom(8).hex()
+        with self.lock:
+            self.jobs[job] = (time.time(), b)
+            while len(self.jobs) > 1024:
+                self.jobs.pop(next(iter(self.jobs)))
+        return {"job": job, "height": b["index"], "prev": b["prev"], "time": b["time"],
+                "bits": b["bits"], "prefix": header_prefix(b)}
+
+    def submit_work(self, job, nonce):
+        with self.lock:
+            j = self.jobs.get(job)
+        if not j or time.time() - j[0] > 900:
+            return "stale"
+        b = dict(j[1], nonce=nonce)
+        b["hash"] = block_hash(b)
+        if not meets(b["hash"], b["bits"]):
+            return "bad"
+        r = self.add_block(b)
+        if r == "ok":
+            print(f"+ block {b['index']} from a tiny miner ({b['hash'][:12]})")
+            self.broadcast("/block", b)
+        return r
+
     def build_template(self, addr):
         """Unsolved block (nonce 0) paying `addr`; the external miner finds the nonce."""
         with self.lock:
@@ -981,6 +1012,13 @@ def make_handler(node):
                     except ValueError:
                         return self.reply(400, {"error": "bad params"})
                     return self.reply(200, node.blocks[start:start + count])
+                if u.path == "/work":
+                    a = q.get("addr", [""])[0]
+                    if not valid_addr(a):
+                        return self.reply(400, {"error": "bad address"})
+                    return self.reply(200, node.make_work(a))
+                if u.path == "/pubkey":                 # lets tiny miners check the TLS pin
+                    return self.reply(200, {"pem": node.tls_pem})
                 if u.path == "/template":
                     a = q.get("addr", [""])[0]
                     if not valid_addr(a):
@@ -1040,6 +1078,15 @@ def make_handler(node):
                 elif r == "bad":
                     node.strike(ip, 5)
                 return self.reply(200, {"ok": r == "ok", "result": r})
+            if self.path == "/submit":
+                if not (isinstance(obj, dict) and isinstance(obj.get("job"), str) and len(obj["job"]) == 16
+                        and type(obj.get("nonce")) is int and 0 <= obj["nonce"] < 2 ** 64):
+                    node.strike(ip)
+                    return self.reply(400, {"error": "bad submit"})
+                r = node.submit_work(obj["job"], obj["nonce"])
+                if r == "bad":
+                    node.strike(ip, 2)
+                return self.reply(200, {"ok": r == "ok", "result": r})
             if self.path == "/peer":
                 if isinstance(obj, dict) and valid_peer(obj.get("url")):
                     node._async(node.consider_peer, obj["url"], False, str(obj.get("pin", "")))
@@ -1085,6 +1132,9 @@ def main():
         node.tls_pin, mode = None, "PLAIN HTTP (insecure!)"
     else:
         kp, cp, node.tls_pin = ensure_cert(data, urlsplit(public).hostname if public else None)
+        with open(cp, "rb") as fh:
+            node.tls_pem = x509.load_pem_x509_certificate(fh.read()).public_key().public_bytes(
+                ser.Encoding.PEM, ser.PublicFormat.SubjectPublicKeyInfo).decode()
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(cp, kp)
