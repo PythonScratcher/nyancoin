@@ -1,0 +1,12 @@
+# Never commit wallets, keys, chain data or local settings
+*.json
+!package.json
+.env
+data-*/
+data/
+*.key
+*.crt
+known_hosts*
+__pycache__/
+*.pyc
+*.png

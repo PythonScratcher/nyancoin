@@ -1,0 +1,39 @@
+[Unit]
+Description=NyanCoin miner
+After=network-online.target nyancoin-node.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nyancoin
+Group=nyancoin
+EnvironmentFile=/etc/nyancoin/miner.env
+Environment=NYAN_HOME=/var/lib/nyancoin/miner-home
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/nyancoin/venv/bin/python /opt/nyancoin/miner.py $MINER_ARGS
+Restart=always
+RestartSec=10
+# Mining is lowest priority so the server stays responsive.
+Nice=19
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/nyancoin
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,44 @@
+[Unit]
+Description=NyanCoin node
+Documentation=file:///opt/nyancoin/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nyancoin
+Group=nyancoin
+EnvironmentFile=/etc/nyancoin/node.env
+Environment=NYAN_HOME=/var/lib/nyancoin/home
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/nyancoin/venv/bin/python /opt/nyancoin/node.py --data /var/lib/nyancoin/node $NODE_ARGS
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+LimitNOFILE=8192
+
+# --- sandboxing: the node can only write to its own data folder
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/nyancoin
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

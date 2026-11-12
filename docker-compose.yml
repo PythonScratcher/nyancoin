@@ -1,0 +1,30 @@
+# NyanCoin with Docker (Linux).  1) cp .env.example .env  and edit it
+#                                2) docker compose up -d --build              (node only)
+#                                   docker compose --profile mining up -d     (node + miner)
+#  Logs / pin:  docker compose logs node        Wallet:  docker compose run --rm node wallet status
+services:
+  node:
+    build: .
+    image: nyancoin:1.0.0
+    restart: unless-stopped
+    # Host networking keeps real client IPs (so per-IP rate limits work) and gives IPv6.
+    network_mode: host
+    env_file: .env
+    volumes:
+      - nyan-node:/data
+    command: ["node"]
+
+  miner:
+    image: nyancoin:1.0.0
+    profiles: ["mining"]
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env
+    depends_on:
+      - node
+    command: ["miner"]
+    healthcheck:
+      disable: true
+
+volumes:
+  nyan-node:
