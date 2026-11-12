@@ -228,6 +228,6 @@ put that line in `node.py` and share the new file. only add checkpoints *everyon
 
 ## credits 💖
 
-made by **[PythonScratcher](https://github.com/PythonScratcher)**, with a lot of help from **Claude** (Anthropic's AI). Claude wrote most of the code: the node, wallets, miners, GUIs, the ESP8266 miner and the Android app 🤖🐾
+made by **[PythonScratcher](https://github.com/PythonScratcher)**, co-authored by **Claude** (Anthropic's AI) 🤖🐾
 
 have fun and happy mining! nyaa~ =^･ω･^=
